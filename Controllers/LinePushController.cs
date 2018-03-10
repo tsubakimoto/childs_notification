@@ -36,11 +36,14 @@ namespace childs_notification.Controllers
         public async Task<IActionResult> Post([FromBody]JToken req)
         {
             logger.LogInformation(req.ToString());
-            var to = Environment.GetEnvironmentVariable("RoomId") ?? appsettings.LineSettings.RoomId;
-            var messages = new List<ISendMessage>
+            var message = ((dynamic)req)?.message?.ToString();
+            if (string.IsNullOrWhiteSpace(message))
             {
-                new TextMessage("Bot said: Hello!!")
-            };
+                return BadRequest("no paramter.");
+            }
+
+            var to = Environment.GetEnvironmentVariable("RoomId") ?? appsettings.LineSettings.RoomId;
+            var messages = new List<ISendMessage> { new TextMessage(message) };
             await lineMessagingClient.PushMessageAsync(to, messages);
             return new OkResult();
         }
