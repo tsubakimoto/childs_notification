@@ -23,8 +23,8 @@ namespace childs_notification.Controllers
         public LinePushController(IOptions<AppSettings> options, ILogger<LinePushController> _logger)
         {
             appsettings = options.Value;
-            // lineMessagingClient = new LineMessagingClient(appsettings.LineSettings.ChannelAccessToken);
-            lineMessagingClient = new LineMessagingClient(Environment.GetEnvironmentVariable("ChannelAccessToken"));
+            var channelAccessToken = Environment.GetEnvironmentVariable("ChannelAccessToken") ?? appsettings.LineSettings.ChannelAccessToken;
+            lineMessagingClient = new LineMessagingClient(channelAccessToken);
             logger = _logger;
         }
 
@@ -36,7 +36,7 @@ namespace childs_notification.Controllers
         public async Task<IActionResult> Post([FromBody]JToken req)
         {
             logger.LogInformation(req.ToString());
-            var to = Environment.GetEnvironmentVariable("RoomId");
+            var to = Environment.GetEnvironmentVariable("RoomId") ?? appsettings.LineSettings.RoomId;
             var messages = new List<ISendMessage>
             {
                 new TextMessage("Bot said: Hello!!")

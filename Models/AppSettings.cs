@@ -9,5 +9,6 @@ namespace childs_notification.Models
         public string ChannelSecret { get; set; }
         public string ChannelAccessToken { get; set; }
         public string StorageConnectionString { get; set; }
+        public string RoomId { get; set; }
     }
 }

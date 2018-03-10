@@ -21,8 +21,8 @@ namespace childs_notification.Controllers
         public LineBotController(IOptions<AppSettings> options, ILogger<LineBotController> _logger)
         {
             appsettings = options.Value;
-            // lineMessagingClient = new LineMessagingClient(appsettings.LineSettings.ChannelAccessToken);
-            lineMessagingClient = new LineMessagingClient(Environment.GetEnvironmentVariable("ChannelAccessToken"));
+            var channelAccessToken = Environment.GetEnvironmentVariable("ChannelAccessToken") ?? appsettings.LineSettings.ChannelAccessToken;
+            lineMessagingClient = new LineMessagingClient(channelAccessToken);
             logger = _logger;
         }
 
@@ -35,8 +35,7 @@ namespace childs_notification.Controllers
         {
             logger.LogInformation(req.ToString());
             var events = WebhookEventParser.Parse(req.ToString());
-            // var connectionString = appsettings.LineSettings.StorageConnectionString;
-            var connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
+            var connectionString = Environment.GetEnvironmentVariable("StorageConnectionString") ?? appsettings.LineSettings.StorageConnectionString;
             var blobStorage = await BlobStorage.CreateAsync(connectionString, "linebotcontainer");
             var eventSourceState = await TableStorage<EventSourceState>.CreateAsync(connectionString, "eventsourcestate");
 
