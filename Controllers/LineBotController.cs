@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using childs_notification.CloudStorage;
 using childs_notification.Models;
 using System;
+using Microsoft.Extensions.Logging;
 
 namespace childs_notification.Controllers
 {
@@ -15,12 +16,14 @@ namespace childs_notification.Controllers
     public class LineBotController : Controller
     {
         private static LineMessagingClient lineMessagingClient;
+        private readonly ILogger logger;
         AppSettings appsettings;
-        public LineBotController(IOptions<AppSettings> options)
+        public LineBotController(IOptions<AppSettings> options, ILogger<LineBotController> _logger)
         {
             appsettings = options.Value;
             // lineMessagingClient = new LineMessagingClient(appsettings.LineSettings.ChannelAccessToken);
             lineMessagingClient = new LineMessagingClient(Environment.GetEnvironmentVariable("ChannelAccessToken"));
+            logger = _logger;
         }
 
         /// <summary>
@@ -29,7 +32,8 @@ namespace childs_notification.Controllers
         /// </summary>
         [HttpPost]
         public async Task<IActionResult> Post([FromBody]JToken req)
-        { 
+        {
+            logger.LogInformation(req.ToString());
             var events = WebhookEventParser.Parse(req.ToString());
             // var connectionString = appsettings.LineSettings.StorageConnectionString;
             var connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
