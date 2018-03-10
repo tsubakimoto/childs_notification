@@ -37,7 +37,8 @@ namespace childs_notification
             {
                 app.UseDeveloperExceptionPage();
             }
-            app.UseLineValidationMiddleware(Configuration.GetSection("LineSettings")["ChannelSecret"]);
+            // app.UseLineValidationMiddleware(Configuration.GetSection("LineSettings")["ChannelSecret"]);
+            app.UseLineValidationMiddleware(Environment.GetEnvironmentVariable("ChannelSecret"));
             app.UseMvc();
         }        
     }

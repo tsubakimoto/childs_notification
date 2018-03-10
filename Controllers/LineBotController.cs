@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 using childs_notification.CloudStorage;
 using childs_notification.Models;
+using System;
 
 namespace childs_notification.Controllers
 {
@@ -18,7 +19,8 @@ namespace childs_notification.Controllers
         public LineBotController(IOptions<AppSettings> options)
         {
             appsettings = options.Value;
-            lineMessagingClient = new LineMessagingClient(appsettings.LineSettings.ChannelAccessToken);
+            // lineMessagingClient = new LineMessagingClient(appsettings.LineSettings.ChannelAccessToken);
+            lineMessagingClient = new LineMessagingClient(Environment.GetEnvironmentVariable("ChannelAccessToken"));
         }
 
         /// <summary>
@@ -29,7 +31,8 @@ namespace childs_notification.Controllers
         public async Task<IActionResult> Post([FromBody]JToken req)
         { 
             var events = WebhookEventParser.Parse(req.ToString());
-            var connectionString = appsettings.LineSettings.StorageConnectionString;
+            // var connectionString = appsettings.LineSettings.StorageConnectionString;
+            var connectionString = Environment.GetEnvironmentVariable("StorageConnectionString");
             var blobStorage = await BlobStorage.CreateAsync(connectionString, "linebotcontainer");
             var eventSourceState = await TableStorage<EventSourceState>.CreateAsync(connectionString, "eventsourcestate");
 
