@@ -28,24 +28,27 @@ namespace childs_notification.Controllers
             logger = _logger;
         }
 
-        /// <summary>
-        /// POST: api/Messages
-        /// Receive a message from a user and reply to it
-        /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody]JToken req)
+        [HttpGet]
+        public async Task<IActionResult> Get()
         {
-            logger.LogInformation(req.ToString());
-            var message = ((dynamic)req)?.message?.ToString();
-            if (string.IsNullOrWhiteSpace(message))
-            {
-                return BadRequest("no paramter.");
-            }
-
             var to = Environment.GetEnvironmentVariable("RoomId") ?? appsettings.LineSettings.RoomId;
-            var messages = new List<ISendMessage> { new TextMessage(message) };
+            var messages = new List<ISendMessage> { new TextMessage(GetMessage()) };
             await lineMessagingClient.PushMessageAsync(to, messages);
             return new OkResult();
+        }
+
+        private string GetMessage()
+        {
+            var tzi = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
+            var now = TimeZoneInfo.ConvertTime(DateTime.Now.ToUniversalTime(), tzi);
+            if (0 <= now.Hour && now.Hour < 12)
+            {
+                return "保育園に送りました";
+            }
+            else
+            {
+                return "保育園に迎えに来ました";
+            }
         }
     }
 }
