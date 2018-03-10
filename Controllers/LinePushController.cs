@@ -1,15 +1,10 @@
 using Line.Messaging;
-using Line.Messaging.Webhooks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
-using childs_notification.CloudStorage;
 using childs_notification.Models;
 using System;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace childs_notification.Controllers
 {
@@ -32,8 +27,11 @@ namespace childs_notification.Controllers
         public async Task<IActionResult> Get()
         {
             var to = Environment.GetEnvironmentVariable("RoomId") ?? appsettings.LineSettings.RoomId;
-            var messages = new List<ISendMessage> { new TextMessage(GetMessage()) };
-            await lineMessagingClient.PushMessageAsync(to, messages);
+            var message = GetMessage();
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                await lineMessagingClient.PushMessageAsync(to, message);
+            }
             return new OkResult();
         }
 
@@ -41,13 +39,17 @@ namespace childs_notification.Controllers
         {
             var tzi = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
             var now = TimeZoneInfo.ConvertTime(DateTime.Now.ToUniversalTime(), tzi);
-            if (0 <= now.Hour && now.Hour < 12)
+            if (7 <= now.Hour && now.Hour < 10)
             {
                 return "保育園に送りました";
             }
-            else
+            else if (17 <= now.Hour && now.Hour < 20)
             {
                 return "保育園に迎えに来ました";
+            }
+            else
+            {
+                return null;
             }
         }
     }
