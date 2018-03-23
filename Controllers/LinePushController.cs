@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using childs_notification.Models;
 using System;
 using Microsoft.Extensions.Logging;
+using System.Linq;
+using Microsoft.AspNetCore.Hosting;
 
 namespace childs_notification.Controllers
 {
@@ -15,42 +17,68 @@ namespace childs_notification.Controllers
         private static LineMessagingClient lineMessagingClient;
         private readonly ILogger logger;
         AppSettings appsettings;
-        public LinePushController(IOptions<AppSettings> options, ILogger<LinePushController> _logger)
+        IHostingEnvironment env;
+
+        public LinePushController(
+            IOptions<AppSettings> options,
+            ILogger<LinePushController> logger,
+            IHostingEnvironment env)
         {
             appsettings = options.Value;
+            this.logger = logger;
+            this.env = env;
+
             var channelAccessToken = Environment.GetEnvironmentVariable("ChannelAccessToken") ?? appsettings.LineSettings.ChannelAccessToken;
             lineMessagingClient = new LineMessagingClient(channelAccessToken);
-            logger = _logger;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> Get()
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(string id)
         {
-            var to = Environment.GetEnvironmentVariable("RoomId") ?? appsettings.LineSettings.RoomId;
-            var message = GetMessage();
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest(new { Error = $"{nameof(id)}が指定されていません。" });
+            }
+
+            var message = GetMessage(GetUserName(id));
             if (!string.IsNullOrWhiteSpace(message))
             {
+                var to = Environment.GetEnvironmentVariable("RoomId") ?? appsettings.LineSettings.RoomId;
                 await lineMessagingClient.PushMessageAsync(to, message);
             }
-            return new OkResult();
+            return Ok(new { Message = message });
         }
 
-        private string GetMessage()
+        private string GetUserName(string id)
+        {
+            return appsettings.LineSettings.Users.FirstOrDefault(u => u.Id == id)?.Name;
+        }
+
+        private string GetMessage(string name)
         {
             var tzi = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
             var now = TimeZoneInfo.ConvertTime(DateTime.Now.ToUniversalTime(), tzi);
+            var message = string.Empty;
+
             if (7 <= now.Hour && now.Hour < 10)
             {
-                return "保育園に送りました";
+                message = "保育園に送りました";
             }
             else if (17 <= now.Hour && now.Hour < 20)
             {
-                return "保育園に迎えに来ました";
+                message = "保育園に迎えに来ました";
             }
-            else
+            else if (env.IsDevelopment())
             {
-                return null;
+                message = $"さんぷるめっせーじです - {DateTime.Now.ToShortTimeString()}";
             }
+
+            if (!string.IsNullOrWhiteSpace(name)
+                && !string.IsNullOrWhiteSpace(message))
+            {
+                message = $"({name}) {message}";
+            }
+            return message;
         }
     }
 }

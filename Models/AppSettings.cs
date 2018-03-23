@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace childs_notification.Models
 {
     public class AppSettings
@@ -10,5 +12,6 @@ namespace childs_notification.Models
         public string ChannelAccessToken { get; set; }
         public string StorageConnectionString { get; set; }
         public string RoomId { get; set; }
+        public IEnumerable<LineUser> Users { get; set; }
     }
 }
