@@ -75,7 +75,7 @@ namespace childs_notification.Controllers
             }
             else if (env.IsDevelopment())
             {
-                message = $"さんぷるめっせーじです - {DateTime.Now.ToShortTimeString()}";
+                message = $"さんぷるめっせーじです - {now.ToShortTimeString()}";
             }
 
             if (!string.IsNullOrWhiteSpace(name)
