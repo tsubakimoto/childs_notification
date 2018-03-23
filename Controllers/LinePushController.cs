@@ -7,6 +7,8 @@ using System;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using Microsoft.AspNetCore.Hosting;
+using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace childs_notification.Controllers
 {
@@ -51,7 +53,10 @@ namespace childs_notification.Controllers
 
         private string GetUserName(string id)
         {
-            return appsettings.LineSettings.Users.FirstOrDefault(u => u.Id == id)?.Name;
+            var envUsers = Environment.GetEnvironmentVariable("Users");
+            var convertedUsers = envUsers == null ? null : JsonConvert.DeserializeObject<IEnumerable<LineUser>>(envUsers);
+            var users = convertedUsers ?? appsettings.LineSettings.Users;
+            return users.FirstOrDefault(u => u.Id == id)?.Name;
         }
 
         private string GetMessage(string name)
