@@ -34,10 +34,9 @@ namespace childs_notification.Controllers
         {
             var events = await request.GetWebhookEventsAsync(configuration["Line:ChannelSecret"]);
             var connectionString = configuration["StorageConnectionString"];
-            var blobStorage = await BlobStorage.CreateAsync(connectionString, "linebotcontainer");
             var eventSourceState = await TableStorage<EventSourceState>.CreateAsync(connectionString, "eventsourcestate");
 
-            var app = new LineBotApp(line, eventSourceState, blobStorage);
+            var app = new LineBotApp(line, eventSourceState);
             await app.RunAsync(events);
             return new OkResult();
         }

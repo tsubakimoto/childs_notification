@@ -16,11 +16,10 @@ namespace childs_notification
         private TableStorage<EventSourceState> sourceState { get; }
         private BlobStorage blobStorage { get; }
 
-        public LineBotApp(LineMessagingClient lineMessagingClient, TableStorage<EventSourceState> tableStorage, BlobStorage blobStorage)
+        public LineBotApp(LineMessagingClient lineMessagingClient, TableStorage<EventSourceState> tableStorage)
         {
             this.messagingClient = lineMessagingClient;
             this.sourceState = tableStorage;
-            this.blobStorage = blobStorage;
         }
 
         #region Handlers
