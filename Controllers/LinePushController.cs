@@ -1,56 +1,48 @@
 using Line.Messaging;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using System.Threading.Tasks;
-using childs_notification.Models;
-using System;
-using Microsoft.Extensions.Logging;
-using System.Linq;
 using Microsoft.AspNetCore.Hosting;
-using Newtonsoft.Json;
-using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 
 namespace childs_notification.Controllers
 {
-    [Produces("application/json")]
-    [Route("api/[controller]")]
-    public class LinePushController : Controller
+    [ApiController]
+    public class LinePushController : ControllerBase
     {
-        private static LineMessagingClient lineMessagingClient;
-        private readonly ILogger logger;
-        AppSettings appsettings;
-        IHostingEnvironment env;
+        private static readonly TimeZoneInfo tzi = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
+        private readonly LineMessagingClient lineMessagingClient;
+        private readonly IConfiguration configuration;
+        private readonly ILogger<LinePushController> logger;
+        private readonly IHostingEnvironment env;
 
         public LinePushController(
-            IOptions<AppSettings> options,
+            IConfiguration configuration,
             ILogger<LinePushController> logger,
             IHostingEnvironment env)
         {
-            appsettings = options.Value;
+            this.configuration = configuration;
             this.logger = logger;
             this.env = env;
 
-            var channelAccessToken = Environment.GetEnvironmentVariable("ChannelAccessToken") ?? appsettings.LineSettings.ChannelAccessToken;
-            lineMessagingClient = new LineMessagingClient(channelAccessToken);
+            lineMessagingClient = new LineMessagingClient(configuration["Line:ChannelAccessToken"]);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Get(string id)
+        [HttpGet]
+        [Route("push")]
+        public async Task<IActionResult> Get()
         {
-            if (string.IsNullOrWhiteSpace(id))
-            {
-                return BadRequest(new { Error = $"{nameof(id)}が指定されていません。" });
-            }
-
-            var message = GetMessage(GetUserName(id));
+            var message = GetMessage();
+            logger.LogInformation("message: {message}", message);
             if (!string.IsNullOrWhiteSpace(message))
             {
-                var to = Environment.GetEnvironmentVariable("RoomId") ?? appsettings.LineSettings.RoomId;
-                await lineMessagingClient.PushMessageAsync(to, message);
+                await lineMessagingClient.PushMessageAsync(configuration["RoomId"], message);
             }
-            return Ok(new { Message = message });
+            return Content(message);
         }
 
+#if false
         private string GetUserName(string id)
         {
             var envUsers = Environment.GetEnvironmentVariable("Users");
@@ -58,30 +50,23 @@ namespace childs_notification.Controllers
             var users = convertedUsers ?? appsettings.LineSettings.Users;
             return users.FirstOrDefault(u => u.Id == id)?.Name;
         }
+#endif
 
-        private string GetMessage(string name)
+        private string GetMessage()
         {
-            var tzi = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
-            var now = TimeZoneInfo.ConvertTime(DateTime.Now.ToUniversalTime(), tzi);
+            var now = TimeZoneInfo.ConvertTime(DateTime.UtcNow, tzi);
             var message = string.Empty;
-
-            if (7 <= now.Hour && now.Hour < 10)
+            if (env.IsDevelopment())
+            {
+                message = $"さんぷるめっせーじです - {now.ToShortTimeString()}";
+            }
+            else if (7 <= now.Hour && now.Hour < 10)
             {
                 message = "保育園に送りました";
             }
             else if (17 <= now.Hour && now.Hour < 20)
             {
                 message = "保育園に迎えに来ました";
-            }
-            else if (env.IsDevelopment())
-            {
-                message = $"さんぷるめっせーじです - {now.ToShortTimeString()}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(name)
-                && !string.IsNullOrWhiteSpace(message))
-            {
-                message = $"({name}) {message}";
             }
             return message;
         }
