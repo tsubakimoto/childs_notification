@@ -34,9 +34,9 @@ namespace childs_notification.Controllers
         {
             var events = await request.GetWebhookEventsAsync(configuration["Line:ChannelSecret"]);
             var connectionString = configuration["StorageConnectionString"];
-            var eventSourceState = await TableStorage<EventSourceState>.CreateAsync(connectionString, "eventsourcestate");
+            var talkLog = await TableStorage<TalkLog>.CreateAsync(connectionString, "ChildsNotification");
 
-            var app = new LineBotApp(line, eventSourceState);
+            var app = new LineBotApp(line, talkLog);
             await app.RunAsync(events);
             return new OkResult();
         }

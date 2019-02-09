@@ -13,13 +13,13 @@ namespace childs_notification
     internal class LineBotApp : WebhookApplication
     {
         private LineMessagingClient messagingClient { get; }
-        private TableStorage<EventSourceState> sourceState { get; }
+        private TableStorage<TalkLog> talkLog { get; }
         private BlobStorage blobStorage { get; }
 
-        public LineBotApp(LineMessagingClient lineMessagingClient, TableStorage<EventSourceState> tableStorage)
+        public LineBotApp(LineMessagingClient lineMessagingClient, TableStorage<TalkLog> tableStorage)
         {
             this.messagingClient = lineMessagingClient;
-            this.sourceState = tableStorage;
+            this.talkLog = tableStorage;
         }
 
         #region Handlers
@@ -74,9 +74,6 @@ namespace childs_notification
 
         protected override async Task OnFollowAsync(FollowEvent ev)
         {
-            // Store source information which follows the bot.
-            await sourceState.AddAsync(ev.Source.Type.ToString(), ev.Source.Id);
-
             var userName = "";
             if (!string.IsNullOrEmpty(ev.Source.Id))
             {
@@ -87,20 +84,9 @@ namespace childs_notification
             await messagingClient.ReplyMessageAsync(ev.ReplyToken, $"Hello {userName}! Thank you for following !");
         }
 
-        protected override async Task OnUnfollowAsync(UnfollowEvent ev)
-        {
-            // Remote source information which unfollows the bot.
-            await sourceState.DeleteAsync(ev.Source.Type.ToString(), ev.Source.Id);
-        }
-
         protected override async Task OnJoinAsync(JoinEvent ev)
         {
             await messagingClient.ReplyMessageAsync(ev.ReplyToken, $"Thank you for letting me join your {ev.Source.Type.ToString().ToLower()}!");
-        }
-
-        protected override async Task OnLeaveAsync(LeaveEvent ev)
-        {
-            await sourceState.DeleteAsync(ev.Source.Type.ToString(), ev.Source.Id);
         }
 
         protected override async Task OnBeaconAsync(BeaconEvent ev)
@@ -126,6 +112,14 @@ namespace childs_notification
 
         private async Task HandleTextAsync(string replyToken, string userMessage, string userId)
         {
+            await talkLog.UpdateAsync(new TalkLog
+            {
+                MessageType = Enum.GetName(typeof(EventMessageType), EventMessageType.Text),
+                ReplyToken = replyToken,
+                UserId = userId,
+                Message = userMessage
+            });
+
             userMessage = userMessage.ToLower().Replace(" ", "");
             ISendMessage replyMessage = null;
             if (userMessage == "buttons")
