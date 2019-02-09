@@ -1,29 +1,27 @@
+using childs_notification.CloudStorage;
+using childs_notification.Models;
 using Line.Messaging;
 using Line.Messaging.Webhooks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
-using System.Threading.Tasks;
-using childs_notification.CloudStorage;
-using childs_notification.Models;
-using System;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace childs_notification.Controllers
 {
-    [Produces("application/json")]
-    [Route("api/[controller]")]
-    public class LineBotController : Controller
+    [ApiController]
+    public class LineBotController : ControllerBase
     {
-        private static LineMessagingClient lineMessagingClient;
-        private readonly ILogger logger;
-        AppSettings appsettings;
-        public LineBotController(IOptions<AppSettings> options, ILogger<LineBotController> _logger)
+        private readonly LineMessagingClient line;
+        private readonly IConfiguration configuration;
+        private readonly ILogger<LineBotController> logger;
+
+        public LineBotController(IConfiguration configuration, ILogger<LineBotController> logger)
         {
-            appsettings = options.Value;
-            var channelAccessToken = Environment.GetEnvironmentVariable("ChannelAccessToken") ?? appsettings.LineSettings.ChannelAccessToken;
-            lineMessagingClient = new LineMessagingClient(channelAccessToken);
-            logger = _logger;
+            this.configuration = configuration;
+            this.logger = logger;
+            line = new LineMessagingClient(configuration["Line:ChannelAccessToken"]);
         }
 
         /// <summary>
@@ -31,15 +29,15 @@ namespace childs_notification.Controllers
         /// Receive a message from a user and reply to it
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody]JToken req)
+        [Route("api/messages")]
+        public async Task<IActionResult> Post(HttpRequestMessage request)
         {
-            logger.LogInformation(req.ToString());
-            var events = WebhookEventParser.Parse(req.ToString());
-            var connectionString = Environment.GetEnvironmentVariable("StorageConnectionString") ?? appsettings.LineSettings.StorageConnectionString;
+            var events = await request.GetWebhookEventsAsync(configuration["Line:ChannelSecret"]);
+            var connectionString = configuration["StorageConnectionString"];
             var blobStorage = await BlobStorage.CreateAsync(connectionString, "linebotcontainer");
             var eventSourceState = await TableStorage<EventSourceState>.CreateAsync(connectionString, "eventsourcestate");
 
-            var app = new LineBotApp(lineMessagingClient, eventSourceState, blobStorage);
+            var app = new LineBotApp(line, eventSourceState, blobStorage);
             await app.RunAsync(events);
             return new OkResult();
         }
